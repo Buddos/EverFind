@@ -1,0 +1,1221 @@
+ DETAILED PROJECT SCOPE: Hardware-Based Persistent Tracking System with ISP Collaboration
+EXECUTIVE SUMMARY
+A comprehensive device tracking system that uses permanent hardware identifiers (MAC addresses, motherboard serials) combined with ISP partnership to track and recover stolen laptops and gadgets even after complete OS reinstallation (flushing). The system provides legally admissible evidence for law enforcement and insurance claims.
+
+🎯 PROJECT OBJECTIVES
+Objective	Description	Success Metric
+Persistent Tracking	Track devices after OS wipe/reinstall	95% identification rate post-flush
+IP Independence	Work with dynamic IP addresses	Track devices regardless of IP changes
+Legal Evidence	Generate court-admissible proof	Evidence accepted in 90% of cases
+Recovery Enablement	Provide actionable data to police	50%+ recovery rate with ISP cooperation
+User-Friendly	Simple registration process	< 5 minutes to register a device
+🏗️ SYSTEM ARCHITECTURE OVERVIEW
+text
+┌─────────────────────────────────────────────────────────────────┐
+│                        USER LAYER                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Web Portal   │  │ Mobile App   │  │ Desktop Agent│          │
+│  │ (Registration│  │ (Management) │  │ (Fingerprint │          │
+│  │  Dashboard)  │  │              │  │  Collector)  │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      APPLICATION LAYER                           │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ Core Modules                                             │    │
+│  │  ├── User Management                                     │    │
+│  │  ├── Device Registration                                 │    │
+│  │  ├── Hardware Fingerprinting                             │    │
+│  │  ├── Stolen Database                                     │    │
+│  │  └── Evidence Generation                                 │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    INTEGRATION LAYER                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ ISP APIs     │  │ Police Portal│  │ SMS/Email    │          │
+│  │ (Real-time   │  │ (Warrant     │  │ Notification │          │
+│  │  MAC Feed)   │  │  Generation) │  │  System      │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
+📦 MODULE 1: USER REGISTRATION & AUTHENTICATION
+1.1 User Account Management
+yaml
+Features:
+  - Email/password registration
+  - Phone number verification (SMS OTP)
+  - Social login (Google, Facebook - optional)
+  - Profile management
+  - Two-factor authentication (2FA) for high security
+
+Database Schema:
+  users:
+    - id: UUID (primary key)
+    - email: string (unique)
+    - phone: string (unique)
+    - password_hash: string
+    - full_name: string
+    - id_number: string (optional, for police reports)
+    - address: text
+    - nearest_police_station: string
+    - created_at: timestamp
+    - last_login: timestamp
+    - is_verified: boolean
+    - 2fa_enabled: boolean
+1.2 Device Registration Portal
+yaml
+Registration Methods:
+  - Web-based form (manual entry)
+  - Desktop agent (automatic detection)
+  - Mobile app (QR code scanning)
+
+Registration Workflow:
+  1. User logs into dashboard
+  2. Clicks "Register New Device"
+  3. Selects device type (Laptop/Phone/Tablet)
+  4. Downloads fingerprinting agent OR enters manually
+  5. Agent captures hardware fingerprints
+  6. User confirms device details
+  7. System generates unique device ID
+  8. Confirmation email/SMS sent
+🔍 MODULE 2: HARDWARE FINGERPRINTING ENGINE
+2.1 Desktop Agent (Windows/macOS/Linux)
+python
+class HardwareFingerprinter:
+    """
+    Installed ONCE on the device before theft
+    Captures permanent hardware identifiers
+    """
+    
+    def capture_fingerprint(self):
+        return {
+            # NETWORK (Most Important - Survives Flush)
+            "mac_addresses": {
+                "ethernet": self.get_mac("eth0"),      # 00:1A:2B:3C:4D:5E
+                "wifi": self.get_mac("wlan0"),         # 00:1A:2B:3C:4D:5F
+                "bluetooth": self.get_mac("bt0"),       # 00:1A:2B:3C:4D:60
+            },
+            
+            # MOTHERBOARD (Permanent)
+            "motherboard": {
+                "serial": self.get_baseboard_serial(),   # CN1296034R00
+                "manufacturer": self.get_baseboard_vendor(),  # Dell
+                "version": self.get_baseboard_version(),      # 0.1
+            },
+            
+            # BIOS/UEFI (Permanent)
+            "bios": {
+                "uuid": self.get_bios_uuid(),           # 4C4C4544-0050-4910-8037
+                "serial": self.get_bios_serial(),       # ABC123
+                "vendor": self.get_bios_vendor(),        # Dell Inc.
+                "version": self.get_bios_version(),      # 1.2.5
+            },
+            
+            # STORAGE (Survives Reinstall)
+            "drives": [
+                {
+                    "serial": self.get_drive_serial("C:"),  # WD-WCC123456
+                    "model": self.get_drive_model(),        # Samsung EVO 860
+                    "size": self.get_drive_size()           # 512GB
+                }
+            ],
+            
+            # CPU (Permanent)
+            "processor": {
+                "id": self.get_cpu_id(),                   # BFEBFBFF000906E9
+                "model": self.get_cpu_model(),              # Intel i7-10750H
+                "serial": self.get_cpu_serial()             # (if available)
+            }
+        }
+2.2 Mobile Agent (iOS/Android)
+swift
+class MobileFingerprinter {
+    func captureIdentifiers() -> [String: Any] {
+        return [
+            // Network identifiers
+            "wifi_mac": getWifiMac(),           // Unique to device
+            "bluetooth_mac": getBluetoothMac(),  // Permanent
+            
+            // Hardware identifiers
+            "device_id": UIDevice.current.identifierForVendor?.uuidString,
+            "model": UIDevice.current.model,
+            "serial": getSerialNumber(),         // iOS requires entitlement
+            
+            // Android specific
+            "android_id": Settings.Secure.ANDROID_ID,
+            "imei": getIMEI(),                    // Phone-specific
+            "meid": getMEID(),                     // CDMA phones
+            
+            // SIM card (if present)
+            "iccid": getSIMCardID()                // Changes with SIM
+        ]
+    }
+}
+2.3 Manual Registration Fallback
+html
+<!-- For users who can't install agent -->
+<form action="/register-device-manual">
+    <h3>Enter Device Details Manually</h3>
+    
+    <label>Device Type:</label>
+    <select name="device_type">
+        <option>Laptop</option>
+        <option>Smartphone</option>
+        <option>Tablet</option>
+    </select>
+    
+    <label>MAC Address (most important):</label>
+    <input type="text" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$" 
+           placeholder="00:1A:2B:3C:4D:5E" required>
+    <small>How to find: Open CMD > ipconfig /all | Physical Address</small>
+    
+    <label>Motherboard Serial:</label>
+    <input type="text" placeholder="CN1296034R00">
+    <small>Windows: wmic baseboard get serialnumber</small>
+    
+    <label>Device Serial Number:</label>
+    <input type="text" placeholder="ABC123XYZ" required>
+    
+    <label>Manufacturer:</label>
+    <input type="text" placeholder="Dell/HP/Lenovo/Apple">
+    
+    <label>Model:</label>
+    <input type="text" placeholder="XPS 15/MacBook Pro">
+    
+    <label>Current IP Address (auto-detected):</label>
+    <input type="text" id="user_ip" readonly>
+    
+    <button type="submit">Register Device</button>
+</form>
+
+<script>
+    // Auto-detect user's IP
+    fetch('https://api.ipify.org?format=json')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('user_ip').value = data.ip;
+        });
+</script>
+🌐 MODULE 3: ISP PARTNERSHIP INTEGRATION
+3.1 ISP Partner Onboarding
+yaml
+Target ISPs (Priority Order):
+  Tier 1 (Must Have):
+    - Safaricom (Kenya - 40% market share)
+    - Airtel (Kenya - 30% market share)
+    - Telkom (Kenya - 15% market share)
+  
+  Tier 2 (Regional):
+    - JTL (Jamii Telecom)
+    - Zuku (Wananchi Group)
+    - Poa! Internet
+  
+  Tier 3 (Mobile Networks):
+    - All mobile data providers
+
+Partnership Agreement Requirements:
+  - Legal MOU signed
+  - Designated ISP liaison officer
+  - 24/7 emergency contact
+  - API access for MAC-to-IP lookup
+  - Data retention compliance
+  - Police warrant acceptance protocol
+3.2 ISP Integration API
+python
+class ISPIntegration:
+    """
+    Standardized interface for all ISP partners
+    """
+    
+    def __init__(self, isp_name):
+        self.isp = isp_name
+        self.api_endpoints = {
+            "Safaricom": "https://api.safaricom.co.ke/v1/network/mac-lookup",
+            "Airtel": "https://api.airtel.africa/v2/device-tracking",
+            "Telkom": "https://api.telkom.co.ke/network/active-connections"
+        }
+        self.api_keys = self.load_api_keys()
+    
+    def get_current_ip_for_mac(self, mac_address):
+        """
+        Real-time lookup: What IP is this MAC using NOW?
+        """
+        response = requests.post(
+            self.api_endpoints[self.isp],
+            headers={
+                "Authorization": f"Bearer {self.api_keys[self.isp]}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "mac_address": mac_address,
+                "timestamp": datetime.now().isoformat(),
+                "request_type": "realtime_lookup"
+            }
+        )
+        
+        if response.status_code == 200:
+            return {
+                "mac": mac_address,
+                "current_ip": response.json()["ip_address"],
+                "assigned_since": response.json()["lease_start"],
+                "connection_type": response.json()["connection_type"],
+                "location_area": response.json()["serving_area"]
+            }
+        return None
+    
+    def get_ip_history(self, mac_address, days=30):
+        """
+        Historical lookup: What IPs has this MAC used?
+        Critical for building evidence timeline
+        """
+        response = requests.post(
+            f"{self.api_endpoints[self.isp]}/history",
+            json={
+                "mac_address": mac_address,
+                "days": days
+            }
+        )
+        
+        return response.json()["ip_history"]  # List of {ip, start_time, end_time}
+    
+    def get_subscriber_details(self, ip_address, timestamp, warrant_number):
+        """
+        Legal: Get customer details for specific IP at specific time
+        Requires police warrant
+        """
+        response = requests.post(
+            f"{self.api_endpoints[self.isp]}/subscriber-lookup",
+            headers={
+                "Authorization": f"Bearer {self.api_keys[self.isp]}",
+                "Legal-Warrant": warrant_number
+            },
+            json={
+                "ip_address": ip_address,
+                "timestamp": timestamp
+            }
+        )
+        
+        return {
+            "subscriber_name": response.json()["customer_name"],
+            "id_number": response.json()["id_number"],
+            "physical_address": response.json()["installation_address"],
+            "contact_phone": response.json()["phone_number"]
+        }
+3.3 ISP Monitoring Feed
+python
+class ISPRealTimeFeed:
+    """
+    WebSocket connection to ISP for real-time MAC monitoring
+    """
+    
+    def __init__(self):
+        self.stolen_macs = self.load_stolen_database()
+        self.active_sessions = {}
+    
+    async def monitor_isp_feed(self, isp_websocket):
+        """
+        Receive continuous feed of active connections
+        """
+        async for message in isp_websocket:
+            # Message format from ISP:
+            # {
+            #   "timestamp": "2024-01-15T14:30:45Z",
+            #   "connections": [
+            #       {
+            #           "mac": "00:1A:2B:3C:4D:5E",
+            #           "ip": "197.248.65.187",
+            #           "device_type": "laptop",
+            #           "signal_strength": -45,
+            #           "connection_time": "2024-01-15T14:28:00Z"
+            #       }
+            #   ]
+            # }
+            
+            for connection in message["connections"]:
+                if connection["mac"] in self.stolen_macs:
+                    # STOLEN DEVICE DETECTED!
+                    await self.handle_stolen_sighting(connection)
+    
+    async def handle_stolen_sighting(self, sighting):
+        """
+        Silent alert when stolen device connects
+        """
+        # 1. Log the sighting
+        evidence_id = self.log_evidence(sighting)
+        
+        # 2. Alert owner (silent notification)
+        owner = self.get_owner_by_mac(sighting["mac"])
+        self.send_owner_alert(owner, sighting)
+        
+        # 3. If multiple sightings, alert police
+        sighting_count = self.get_sighting_count(sighting["mac"], hours=24)
+        if sighting_count >= 3:
+            self.alert_police(sighting["mac"], evidence_id)
+🚨 MODULE 4: STOLEN DEVICE DETECTION ENGINE
+4.1 Continuous Monitoring System
+python
+class StolenDeviceMonitor:
+    """
+    24/7/365 monitoring service
+    """
+    
+    def __init__(self):
+        self.isp_feeds = []
+        self.stolen_database = StolenDatabase()
+        self.evidence_locker = EvidenceLocker()
+        
+    def run_monitoring_loop(self):
+        """
+        Main monitoring loop - runs forever
+        """
+        while True:
+            # Check all ISP partners
+            for isp in self.isp_feeds:
+                # Get all active connections from this ISP
+                active_connections = isp.get_active_connections()
+                
+                for connection in active_connections:
+                    if self.is_stolen(connection.mac):
+                        self.process_stolen_sighting(connection, isp)
+                    
+                    # Also check for partial matches (if MAC slightly different)
+                    elif self.is_partial_match(connection):
+                        self.flag_for_review(connection)
+            
+            # Sleep 5 minutes between full scans
+            # (Real-time alerts come via WebSocket)
+            time.sleep(300)
+    
+    def process_stolen_sighting(self, connection, isp):
+        """
+        Handle detection of stolen device
+        """
+        # Create evidence record
+        evidence = {
+            "device_id": self.get_device_id(connection.mac),
+            "mac_address": connection.mac,
+            "ip_address": connection.ip,
+            "isp": isp.name,
+            "timestamp": datetime.now(),
+            "location": self.geolocate_ip(connection.ip),
+            "connection_duration": connection.duration,
+            "signal_strength": connection.signal,
+            "confidence": 1.0  # 100% - MAC match
+        }
+        
+        # Store evidence
+        evidence_id = self.evidence_locker.store(evidence)
+        
+        # Update device status
+        self.stolen_database.update_last_seen(
+            connection.mac, 
+            evidence_id
+        )
+        
+        # Notify owner (silent)
+        owner = self.get_owner(connection.mac)
+        self.notification_service.notify_owner(
+            owner_id=owner.id,
+            evidence_id=evidence_id,
+            silent=True  # Don't alert thief
+        )
+        
+        # Check if we should alert police
+        if self.should_alert_police(connection.mac):
+            self.police_notification.alert(
+                device_mac=connection.mac,
+                evidence_ids=self.get_recent_evidence(connection.mac, days=7)
+            )
+4.2 Confidence Scoring System
+python
+class ConfidenceScorer:
+    """
+    Calculate confidence that a detected device is the stolen one
+    Used when MAC doesn't match exactly (spoofing attempts)
+    """
+    
+    def calculate_confidence(self, detected, stolen_profile):
+        """
+        Score from 0-1 how likely this is the stolen device
+        """
+        score = 0.0
+        matches = []
+        
+        # MAC address match (most important)
+        if detected.mac == stolen_profile.mac:
+            score += 0.5
+            matches.append("exact_mac")
+        elif self.mac_similarity(detected.mac, stolen_profile.mac) > 0.8:
+            score += 0.3  # Possible MAC spoofing attempt
+            matches.append("similar_mac")
+        
+        # ISP range match
+        if detected.isp == stolen_profile.home_isp:
+            score += 0.15
+            matches.append("same_isp")
+        
+        # Geographic area match
+        if self.same_city(detected.location, stolen_profile.home_location):
+            score += 0.15
+            matches.append("same_area")
+        
+        # Behavioral patterns
+        if self.matches_usage_pattern(detected, stolen_profile):
+            score += 0.1
+            matches.append("behavior_match")
+        
+        # Time patterns
+        if self.matches_time_pattern(detected.timestamp, stolen_profile):
+            score += 0.1
+            matches.append("time_pattern")
+        
+        return {
+            "confidence": min(score, 1.0),
+            "matches": matches,
+            "requires_review": score < 0.7 and score > 0.4
+        }
+📋 MODULE 5: EVIDENCE MANAGEMENT SYSTEM
+5.1 Evidence Locker Database
+sql
+-- Evidence storage schema
+CREATE TABLE evidence_sightings (
+    id UUID PRIMARY KEY,
+    device_id UUID REFERENCES devices(id),
+    mac_address VARCHAR(17) NOT NULL,
+    ip_address INET NOT NULL,
+    isp_id INTEGER REFERENCES isps(id),
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    location_city VARCHAR(100),
+    location_country VARCHAR(100),
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    connection_type VARCHAR(50),
+    confidence_score DECIMAL(3,2),
+    evidence_hash VARCHAR(64), -- SHA-256 of record for tamper-proofing
+    blockchain_tx VARCHAR(66) -- Optional: store hash on blockchain
+);
+
+CREATE TABLE evidence_chain (
+    id UUID PRIMARY KEY,
+    previous_hash VARCHAR(64) NOT NULL,
+    current_hash VARCHAR(64) NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    -- Links sightings together for court
+    device_mac VARCHAR(17),
+    sighting_ids UUID[] 
+);
+
+CREATE TABLE police_cases (
+    case_number VARCHAR(50) PRIMARY KEY,
+    device_id UUID REFERENCES devices(id),
+    owner_id UUID REFERENCES users(id),
+    status VARCHAR(20), -- open, closed, recovered
+    assigned_officer VARCHAR(100),
+    warrant_number VARCHAR(50),
+    created_at TIMESTAMP,
+    closed_at TIMESTAMP
+);
+5.2 Police Report Generator
+python
+class PoliceReportGenerator:
+    """
+    Generates court-admissible evidence packages
+    """
+    
+    def generate_comprehensive_report(self, device_id, case_number):
+        """
+        Create complete evidence package for police
+        """
+        device = self.get_device(device_id)
+        sightings = self.get_sightings(device_id, days=90)
+        owner = self.get_owner(device.owner_id)
+        
+        report = {
+            "case_metadata": {
+                "case_number": case_number,
+                "generated_date": datetime.now().isoformat(),
+                "generated_by": "TrackMaster System v2.0",
+                "evidence_hash": self.hash_report(sightings)
+            },
+            
+            "complainant_details": {
+                "name": owner.full_name,
+                "id_number": owner.id_number,
+                "phone": owner.phone,
+                "email": owner.email,
+                "address": owner.address,
+                "police_station": owner.nearest_police_station
+            },
+            
+            "stolen_device_details": {
+                "device_type": device.type,
+                "manufacturer": device.manufacturer,
+                "model": device.model,
+                "serial_number": device.serial_number,
+                "color": device.color,
+                "distinguishing_features": device.features,
+                "purchase_date": device.purchase_date,
+                "purchase_value": device.value,
+                "receipt_attached": device.receipt_url
+            },
+            
+            "hardware_fingerprint": {
+                "primary_mac_address": device.mac_address,
+                "secondary_mac_addresses": device.additional_macs,
+                "motherboard_serial": device.motherboard_serial,
+                "bios_uuid": device.bios_uuid,
+                "drive_serials": device.drive_serials,
+                "cpu_id": device.cpu_id,
+                "verification_method": "Hardware-level fingerprinting"
+            },
+            
+            "tracking_evidence_timeline": [
+                {
+                    "sighting_number": idx + 1,
+                    "date": s.timestamp.strftime("%Y-%m-%d"),
+                    "time": s.timestamp.strftime("%H:%M:%S"),
+                    "ip_address": s.ip_address,
+                    "isp": s.isp_name,
+                    "location": f"{s.city}, {s.country}",
+                    "coordinates": f"{s.latitude}, {s.longitude}",
+                    "map_url": self.generate_map_static(s.latitude, s.longitude),
+                    "confidence": f"{s.confidence_score*100}%",
+                    "evidence_hash": s.evidence_hash
+                } for idx, s in enumerate(sightings)
+            ],
+            
+            "isp_affidavits": self.generate_isp_affidavits(sightings),
+            
+            "geographic_analysis": {
+                "primary_location": self.get_primary_location(sightings),
+                "movement_pattern": self.analyze_movement(sightings),
+                "frequency_map": self.generate_heatmap(sightings)
+            },
+            
+            "legal_attachments": {
+                "warrant_template": "/templates/warrant_request.docx",
+                "isp_disclosure_form": "/templates/isp_disclosure.pdf",
+                "evidence_certification": self.certify_evidence(sightings)
+            },
+            
+            "recovery_instructions": {
+                "step1": "Present this report to magistrate for search warrant",
+                "step2": "Submit warrant to ISP with specific IPs and timestamps",
+                "step3": "ISP provides subscriber details within 24-48 hours",
+                "step4": "Execute search warrant at provided physical address",
+                "step5": "Verify device via matching serial numbers/MAC addresses"
+            }
+        }
+        
+        # Generate PDF
+        pdf = self.render_pdf("police_report_template.html", report)
+        
+        # Store in case file
+        self.save_report(case_number, pdf)
+        
+        return pdf
+5.3 Evidence Blockchain Integration (Optional)
+python
+class EvidenceBlockchain:
+    """
+    Optional: Store evidence hashes on blockchain for tamper-proofing
+    """
+    
+    def record_sighting_on_chain(self, sighting):
+        """
+        Create immutable record of sighting
+        """
+        evidence_string = f"{sighting.mac}:{sighting.ip}:{sighting.timestamp}"
+        evidence_hash = hashlib.sha256(evidence_string.encode()).hexdigest()
+        
+        # Store on Ethereum (or other blockchain)
+        tx_hash = self.blockchain_contract.addEvidence(
+            sighting.device_id,
+            evidence_hash,
+            sighting.timestamp.isoformat()
+        )
+        
+        return {
+            "evidence_hash": evidence_hash,
+            "blockchain_tx": tx_hash,
+            "block_number": self.get_block_number(tx_hash),
+            "timestamp": datetime.now()
+        }
+👮 MODULE 6: POLICE PORTAL
+6.1 Law Enforcement Dashboard
+html
+<!-- Police Login Portal -->
+<div class="police-portal">
+    <div class="login-section">
+        <h2>Kenya Police - Cyber Crime Unit</h2>
+        <form action="/police/login">
+            <input type="text" placeholder="Badge Number" required>
+            <input type="password" placeholder="Password" required>
+            <input type="text" placeholder="Station Code" required>
+            <button type="submit">Access Tracking System</button>
+        </form>
+    </div>
+    
+    <div class="emergency-banner">
+        <h3>🚨 EMERGENCY TRACKING HOTLINE</h3>
+        <p>24/7 Direct Line: +254 20 123 4567</p>
+        <p>Email: cyber-emergency@police.go.ke</p>
+    </div>
+</div>
+
+<!-- Police Dashboard After Login -->
+<div class="police-dashboard">
+    <div class="search-panel">
+        <h3>Search Stolen Device</h3>
+        <input type="text" placeholder="MAC Address (00:1A:2B:3C:4D:5E)">
+        <input type="text" placeholder="Case Number">
+        <input type="text" placeholder="Serial Number">
+        <input type="text" placeholder="Owner ID Number">
+        <button>Search Database</button>
+    </div>
+    
+    <div class="active-cases">
+        <h3>Active Tracking Cases</h3>
+        <table>
+            <tr>
+                <th>Case #</th>
+                <th>Device</th>
+                <th>Owner</th>
+                <th>Last Seen</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            <tr class="high-priority">
+                <td>CY-2024-001</td>
+                <td>Dell XPS 15</td>
+                <td>John Doe</td>
+                <td>Today 14:30</td>
+                <td>South B, Nairobi</td>
+                <td>🟢 ACTIVE</td>
+                <td><button>Generate Warrant</button></td>
+            </tr>
+            <tr>
+                <td>CY-2024-002</td>
+                <td>MacBook Pro</td>
+                <td>Jane Smith</td>
+                <td>Yesterday 20:15</td>
+                <td>Westlands</td>
+                <td>🟡 MONITORING</td>
+                <td><button>View Evidence</button></td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="warrant-generator">
+        <h3>Generate Search Warrant Request</h3>
+        <form action="/police/generate-warrant">
+            <select name="isp">
+                <option>Safaricom</option>
+                <option>Airtel</option>
+                <option>Telkom</option>
+            </select>
+            <input type="text" placeholder="IP Address" required>
+            <input type="datetime-local" placeholder="Timestamp" required>
+            <input type="text" placeholder="MAC Address" required>
+            <input type="text" placeholder="Case Number" required>
+            <input type="text" placeholder="Presiding Magistrate">
+            <button>Generate Legal Request</button>
+        </form>
+    </div>
+</div>
+6.2 Warrant Request Generator
+python
+class WarrantGenerator:
+    """
+    Generate legally formatted warrant requests
+    """
+    
+    def create_warrant_request(self, case_data):
+        """
+        Create formal warrant request for magistrate
+        """
+        warrant = f"""
+        REPUBLIC OF KENYA
+        IN THE CHIEF MAGISTRATE'S COURT AT NAIROBI
+        MISCELLANEOUS CRIMINAL APPLICATION NO. {case_data.number} OF 2024
+        
+        BETWEEN
+        REPUBLIC ................................................................. APPLICANT
+        VERSUS
+        SUBSCRIBER DETAILS FOR IP {case_data.ip_address} .................... RESPONDENT
+        
+        APPLICATION FOR SEARCH WARRANT UNDER SECTION 118 OF THE CRIMINAL PROCEDURE CODE
+        
+        TAKE NOTICE that this application seeks orders to compel:
+        {case_data.isp_name} to disclose subscriber details for:
+        
+        IP Address: {case_data.ip_address}
+        Date: {case_data.timestamp}
+        Time: {case_data.time}
+        
+        EVIDENCE IN SUPPORT:
+        1. The device (MAC: {case_data.mac_address}) was reported stolen on {case_data.theft_date}
+        2. The device was detected using the above IP at the specified time
+        3. ISP records confirm this MAC was assigned this IP
+        4. This constitutes probable cause that the stolen device is at the subscriber's premises
+        
+        ATTACHMENTS:
+        - Police Report {case_data.police_report}
+        - ISP Affidavit of Connection
+        - Tracking System Evidence Log
+        - Owner's Complaint and Identification
+        
+        DATED at NAIROBI this {datetime.now().strftime("%d day of %B %Y")}
+        
+        ________________________
+        INVESTIGATING OFFICER
+        {case_data.officer_name}
+        Badge No: {case_data.badge_number}
+        
+        RECEIVED the {datetime.now().strftime("%d day of %B %Y")}
+        
+        ________________________
+        MAGISTRATE
+        """
+        return warrant
+📱 MODULE 7: USER NOTIFICATION SYSTEM
+7.1 Owner Alert Types
+python
+class OwnerNotifications:
+    """
+    Multi-channel notifications for device owners
+    """
+    
+    def send_alert(self, owner, device, sighting):
+        """
+        Send appropriate alert based on severity
+        """
+        alert_level = self.determine_alert_level(device, sighting)
+        
+        if alert_level == "CRITICAL":
+            # Device just came online - send immediately
+            self.send_sms(owner.phone, self.format_sms_critical(device, sighting))
+            self.send_email(owner.email, self.format_email_critical(device, sighting))
+            self.push_notification(owner.device_token, self.format_push_critical(device, sighting))
+            
+        elif alert_level == "UPDATE":
+            # Device location changed - daily digest
+            self.send_email(owner.email, self.format_email_update(device, sighting))
+            
+        elif alert_level == "INFO":
+            # Weekly summary
+            self.send_email(owner.email, self.format_email_weekly(device))
+    
+    def format_sms_critical(self, device, sighting):
+        return f"""
+        🔴 ALERT: Your {device.type} ({device.model}) was just detected!
+        📍 Location: {sighting.city}
+        🕒 Time: {sighting.timestamp.strftime('%H:%M today')}
+        ℹ️ Police have been notified.
+        - TrackMaster System
+        """
+    
+    def format_email_critical(self, device, sighting):
+        return f"""
+        <h2>🚨 YOUR STOLEN DEVICE HAS BEEN FOUND</h2>
+        
+        <p>Good news! Your {device.manufacturer} {device.model} was just detected online.</p>
+        
+        <div style="background: #f0f0f0; padding: 15px; border-radius: 5px;">
+            <h3>📍 LOCATION DETAILS</h3>
+            <p><strong>City/Area:</strong> {sighting.city}, {sighting.country}</p>
+            <p><strong>Exact Time:</strong> {sighting.timestamp.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            <p><strong>IP Address:</strong> {sighting.ip_address}</p>
+            <p><strong>ISP:</strong> {sighting.isp}</p>
+            <p><strong>Connection Type:</strong> {sighting.connection_type}</p>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>🔍 WHAT HAPPENS NEXT</h3>
+            <ol>
+                <li>Police have been automatically notified</li>
+                <li>Evidence has been preserved for warrant</li>
+                <li>ISP is tracking this connection</li>
+                <li>Do NOT attempt to recover yourself</li>
+            </ol>
+        </div>
+        
+        <div style="background: #ffe0e0; padding: 15px; border-radius: 5px; margin-top: 20px;">
+            <h3>📋 YOUR CASE NUMBER</h3>
+            <p style="font-size: 24px; font-weight: bold;">{device.case_number}</p>
+            <p>Quote this when contacting police: {device.police_station}</p>
+        </div>
+        
+        <p style="margin-top: 30px;">
+            <a href="https://trackmaster.com/case/{device.case_number}" 
+               style="background: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                View Live Tracking Dashboard
+            </a>
+        </p>
+        """
+7.2 Silent Notification Protocol
+python
+class SilentNotifier:
+    """
+    Ensures thief doesn't know they're being tracked
+    """
+    
+    def notify_owner_silently(self, owner, sighting):
+        """
+        Send notification without alerting device user
+        """
+        # Don't send anything to the stolen device
+        # Only send to owner's registered contact methods
+        
+        # Send encrypted email (thief can't access owner's email)
+        encrypted = self.encrypt_for_owner(owner.public_key, {
+            "type": "sighting",
+            "device": sighting.device_id,
+            "location": sighting.location,
+            "timestamp": sighting.timestamp
+        })
+        
+        self.send_encrypted_email(owner.email, encrypted)
+        
+        # Send SMS (different device)
+        self.send_sms(owner.phone, f"Device {sighting.device_id[:8]}... online. Check app.")
+        
+        # Log in secure dashboard
+        self.add_to_dashboard(owner.id, sighting, silent=True)
+🔐 MODULE 8: SECURITY & PRIVACY
+8.1 Data Protection
+yaml
+Security Measures:
+  Encryption:
+    - All data encrypted at rest (AES-256)
+    - All transmissions encrypted (TLS 1.3)
+    - Hardware IDs hashed in public views
+    - Owner details encrypted with user's key
+  
+  Access Control:
+    - Role-based access (User, Police, Admin, ISP)
+    - Multi-factor authentication for police
+    - Audit logs for all data access
+    - IP whitelisting for ISP APIs
+  
+  Privacy Protections:
+    - No location history without consent
+    - Data deletion on device removal
+    - Anonymized data for statistics
+    - GDPR/Kenya Data Protection Act compliance
+8.2 Audit Logging
+python
+class AuditLogger:
+    """
+    Track all access to sensitive data
+    """
+    
+    def log_access(self, user, resource, action):
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "user_id": user.id,
+            "user_role": user.role,
+            "user_ip": user.current_ip,
+            "resource_type": resource.type,
+            "resource_id": resource.id,
+            "action": action,
+            "authorization_method": user.auth_method,
+            "session_id": user.session_id,
+            "outcome": "success"
+        }
+        
+        # Store in immutable audit log
+        self.audit_database.insert(log_entry)
+        
+        # Also log to separate secure storage
+        self.secure_audit_file.append(log_entry)
+        
+        # Alert on suspicious access
+        if self.is_suspicious(log_entry):
+            self.alert_security_team(log_entry)
+📊 MODULE 9: ADMINISTRATIVE DASHBOARD
+9.1 System Statistics
+python
+class AdminDashboard:
+    """
+    System-wide monitoring and analytics
+    """
+    
+    def get_system_stats(self):
+        return {
+            "devices": {
+                "total_registered": self.count_total_devices(),
+                "stolen_marked": self.count_stolen_devices(),
+                "recovered": self.count_recovered_devices(),
+                "active_tracking": self.count_active_tracking()
+            },
+            
+            "isp_partners": {
+                "connected": self.count_active_isps(),
+                "pending": self.count_pending_isps(),
+                "api_calls_today": self.sum_api_calls()
+            },
+            
+            "detections": {
+                "today": self.count_detections_today(),
+                "this_week": self.count_detections_week(),
+                "this_month": self.count_detections_month(),
+                "average_response_time": self.avg_detection_time()
+            },
+            
+            "police_cases": {
+                "open": self.count_open_cases(),
+                "closed": self.count_closed_cases(),
+                "recovered": self.count_recovered_cases(),
+                "average_recovery_time": self.avg_recovery_time()
+            },
+            
+            "system_health": {
+                "uptime": self.get_uptime(),
+                "api_latency": self.avg_api_latency(),
+                "error_rate": self.error_rate(),
+                "active_users": self.active_users_now()
+            }
+        }
+💰 MODULE 10: MONETIZATION & SUSTAINABILITY
+10.1 Revenue Models
+yaml
+Free Tier:
+  - Register up to 3 devices
+  - Basic tracking (48-hour delay)
+  - Email notifications only
+  - Community support
+
+Premium Tier (KSH 500/year ≈ $3.50):
+  - Unlimited devices
+  - Real-time alerts
+  - SMS + Email + Push notifications
+  - Priority police liaison
+  - Insurance report generation
+  - 24/7 support
+
+Business Tier (KSH 5,000/year ≈ $35):
+  - Track company fleet (up to 50 devices)
+  - API access for integration
+  - Custom branding
+  - Dedicated account manager
+  - Bulk registration
+  - Monthly reports
+
+ISP Partnership Fees:
+  - Integration fee: KSH 200,000 ≈ $1,400
+  - Annual maintenance: KSH 100,000 ≈ $700
+  - Per-lookup fee: KSH 5 ≈ $0.035
+
+Police Department:
+  - Free access (public service)
+  - Premium support SLA
+  - Training included
+📅 IMPLEMENTATION TIMELINE
+Phase 1: Foundation (Months 1-2)
+yaml
+Week 1-2:
+  - Project setup and team assembly
+  - Requirements finalization
+  - Technology stack selection
+  - Database design
+
+Week 3-4:
+  - User authentication system
+  - Basic device registration
+  - Admin panel foundation
+  - Security framework
+
+Week 5-6:
+  - Hardware fingerprinting agent (desktop)
+  - MAC address capture utilities
+  - Registration workflow
+  - Testing environment
+
+Week 7-8:
+  - ISP partnership outreach
+  - Legal framework development
+  - MOU templates creation
+  - Initial ISP meetings
+Phase 2: Core Development (Months 3-4)
+yaml
+Week 9-10:
+  - ISP API integration (first partner)
+  - Real-time monitoring engine
+  - Evidence database
+  - Notification system
+
+Week 11-12:
+  - Mobile fingerprinting agents
+  - Additional ISP integrations
+  - Confidence scoring algorithm
+  - Police portal v1
+
+Week 13-14:
+  - Evidence blockchain integration
+  - Report generator
+  - Warrant request templates
+  - Police training materials
+
+Week 15-16:
+  - Testing with real stolen reports
+  - Performance optimization
+  - Security audit
+  - Beta launch with 100 users
+Phase 3: Launch & Scale (Months 5-6)
+yaml
+Week 17-18:
+  - Public launch
+  - Marketing campaign
+  - Press release
+  - Police partnership formalization
+
+Week 19-20:
+  - User feedback collection
+  - Bug fixes and improvements
+  - Additional ISP partnerships
+  - Regional expansion planning
+
+Week 21-22:
+  - Mobile app launch (iOS/Android)
+  - Premium tier activation
+  - Business customer onboarding
+  - Training workshops
+
+Week 23-24:
+  - Performance review
+  - Scale infrastructure
+  - International ISP discussions
+  - Version 2.0 planning
+💻 TECHNOLOGY STACK RECOMMENDATION
+yaml
+Backend:
+  Language: Python 3.11+ (FastAPI) / Node.js (Express)
+  Database: PostgreSQL 15+ (with PostGIS)
+  Cache: Redis 7+
+  Message Queue: RabbitMQ / Kafka
+  Search: Elasticsearch (for log analysis)
+
+Frontend:
+  Web: React 18+ with TypeScript
+  Mobile: React Native / Flutter
+  Desktop Agent: Python (PyInstaller) / C# (.NET)
+
+Infrastructure:
+  Cloud: AWS / Azure / Google Cloud
+  Containers: Docker + Kubernetes
+  Monitoring: Prometheus + Grafana
+  Logging: ELK Stack (Elasticsearch, Logstash, Kibana)
+  CDN: CloudFlare
+
+Security:
+  Encryption: AES-256, TLS 1.3
+  Authentication: JWT + OAuth2
+  Hardware Security Module (HSM) for keys
+  Regular penetration testing
+
+APIs:
+  REST + WebSocket for real-time
+  GraphQL for complex queries
+  OpenAPI/Swagger documentation
+📋 DELIVERABLES CHECKLIST
+Software Deliverables
+User web portal (registration + dashboard)
+
+Mobile app (iOS/Android)
+
+Desktop fingerprinting agents (Win/Mac/Linux)
+
+ISP integration API layer
+
+Police portal with warrant generator
+
+Admin dashboard
+
+Evidence management system
+
+Notification engine (SMS/Email/Push)
+
+Documentation Deliverables
+Technical architecture document
+
+API documentation
+
+User manual
+
+Police procedural guide
+
+ISP integration guide
+
+Training materials
+
+Security whitepaper
+
+Privacy policy & terms of service
+
+Legal Deliverables
+ISP partnership agreements (MOUs)
+
+Police department MOUs
+
+Data protection compliance docs
+
+Warrant request templates
+
+Evidence admissibility certification
+
+Insurance company integration forms
+
+🎯 SUCCESS METRICS & KPIs
+yaml
+Technical KPIs:
+  - System uptime: 99.9%
+  - Detection latency: < 5 minutes
+  - False positive rate: < 1%
+  - API response time: < 200ms
+  - Concurrent users supported: 10,000+
+
+Business KPIs:
+  - Registered devices (Year 1): 10,000
+  - ISP partners (Year 1): 3 (major)
+  - Police stations onboarded: 50
+  - Devices recovered: 500+ (5% of stolen)
+  - Revenue (Year 1): $50,000+
+
+User KPIs:
+  - User satisfaction: 4.5/5
+  - Registration time: < 3 minutes
+  - Support response time: < 2 hours
+  - App store rating: 4.5+ stars
+⚠️ RISKS & MITIGATION
+Risk	Probability	Impact	Mitigation
+ISP unwilling to partner	High	Critical	Start with smaller ISPs, build case studies, regulatory push
+MAC address spoofing	Medium	High	Multiple fingerprinting layers, behavioral analysis
+Privacy concerns	Medium	Medium	Transparent policies, user consent, data minimization
+Legal challenges	Low	High	Consult cyber lawyers, follow data protection laws
+False positives	Medium	Medium	Confidence scoring, human review for borderline cases
+System downtime	Low	High	Redundant infrastructure, failover systems
+Competition	Medium	Medium	Unique ISP integration, police partnerships
+🏁 CONCLUSION
+This comprehensive solution provides a practical, legally-sound, and technically feasible approach to tracking stolen devices even after complete OS reinstallation. By focusing on permanent hardware identifiers and ISP partnerships, it creates an unbreakable chain of evidence that leads to actual recovery.
+
+The system is designed to be:
+
+Resilient - Survives any software-level tampering
+
+Accurate - Multiple verification layers
+
+Legal - Court-admissible evidence
+
+Scalable - From individual users to enterprises
+
+Sustainable - Clear revenue model
+
+Estimated Total Cost: $50,000 - $80,000 (First Year)
+Expected ROI: 2-3 years through subscriptions and partnerships
+Social Impact: Thousands of devices recovered, reduced theft rates
